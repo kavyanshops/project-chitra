@@ -3,16 +3,19 @@ name = "chitra"
 version = "0.1.0"
 description = "Physics-conditioned, uncertainty-aware registration of Chandrayaan-2 optical imagery (SIH 2026 PS 26166)"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
 dependencies = [
-    "numpy>=2.5.3",
-    "opencv-python-headless>=5.0.0.93",
-    "rasterio>=1.5.1",
+    "fastapi>=0.110",
+    "numpy>=2.0",
+    "opencv-python-headless>=4.9",
+    "python-multipart>=0.0.9",
+    "rasterio>=1.3",
+    "uvicorn>=0.29",
 ]
 
 [project.optional-dependencies]
-# GPU-only (Colab); too heavy for the local M4 laptop
-roma = ["torch", "romav2"]
+# RoMa v2 dense matcher: CUDA ("precise") or Apple MPS / CPU ("base", ~2 GB RAM)
+roma = ["torch", "romav2>=2.0.1"]
 
 [project.scripts]
 chitra = "chitra.cli:main"
@@ -20,6 +23,3 @@ chitra = "chitra.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.uv.sources]
-romav2 = { git = "https://github.com/Parskatt/RoMaV2" }

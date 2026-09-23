@@ -2,6 +2,12 @@ import cv2
 import numpy as np
 
 
+def default():
+    """'roma' when RoMa v2 is installed (`pip install chitra[roma]`), else 'sift'."""
+    import importlib.util
+    return "roma" if importlib.util.find_spec("romav2") else "sift"
+
+
 def sift(a_u8, b_u8, ratio=0.75, nfeatures=8000):
     """SIFT + Lowe ratio. Returns (pts_a Nx2, pts_b Nx2, score N) where score = 1 - d1/d2."""
     s = cv2.SIFT_create(nfeatures=nfeatures)
@@ -19,12 +25,15 @@ def sift(a_u8, b_u8, ratio=0.75, nfeatures=8000):
 
 
 def roma(a_u8, b_u8, n=5000):
-    """RoMa v2 dense matcher (GPU/Colab only: `pip install chitra[roma]`). Not run on the local laptop."""
-    import torch  # noqa: F401
+    """RoMa v2 dense matcher (`pip install chitra[roma]`). 'precise' (800 px + 1280 px refine) on CUDA,
+    'base' (640 px) on Apple MPS / CPU to fit a 16 GB laptop."""
+    import torch
     from PIL import Image
     from romav2 import RoMaV2
 
-    m = roma.model = getattr(roma, "model", None) or RoMaV2()
+    if getattr(roma, "model", None) is None:
+        roma.model = RoMaV2(RoMaV2.Cfg(setting="precise" if torch.cuda.is_available() else "base"))
+    m = roma.model
     A, B = (Image.fromarray(x).convert("RGB") for x in (a_u8, b_u8))
     preds = m.match(A, B)
     matches, overlap, _, _ = m.sample(preds, n)

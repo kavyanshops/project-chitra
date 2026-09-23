@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from . import geometry, match, metrics, prep, render
+from . import geometry, io, match, metrics, prep, render
 from .io import write_geotiff
 
 
@@ -30,6 +30,26 @@ def register(src, ref, dem=None, sun=None, gsd_src=1.0, gsd_ref=1.0, matcher="si
     best = min(runs, key=lambda r: (RANK[r["metrics"]["verdict"]], -r["metrics"]["inliers"]))
     best["render"] = lit
     return best
+
+
+def register_files(src_path, ref_path, dem_path=None, sun=None, src_gsd=None, ref_gsd=None, src_window=None,
+                   ref_window=None, matcher="auto", model="affine", domain="auto", out="runs", name="register",
+                   extra_config=None):
+    """Read files, register, write the run folder. Used by the CLI and the web API. Returns (result, run_dir).
+    sun=None reads (az, el) from the source label if one exists; a DEM needs a Sun geometry."""
+    src, _, _, gs = io.read(src_path, src_window)
+    ref, tr, crs, gr = io.read(ref_path, ref_window)
+    dem = io.read(dem_path, ref_window)[0] if dem_path else None
+    sun = sun or io.read_sun(src_path)
+    if dem is not None and sun is None:
+        raise ValueError("a DEM needs the source Sun geometry (azimuth + elevation, or a label that carries it)")
+    matcher = match.default() if matcher == "auto" else matcher
+    res = register(src, ref, dem=dem, sun=sun, gsd_src=src_gsd or gs, gsd_ref=ref_gsd or gr, matcher=matcher,
+                   model=model, domain=domain)
+    cfg = {"src": str(src_path), "ref": str(ref_path), "dem": dem_path and str(dem_path), "sun_used": sun,
+           "src_gsd": src_gsd or gs, "ref_gsd": ref_gsd or gr, "src_window": src_window, "ref_window": ref_window,
+           "matcher": matcher, "model": model, "domain": domain, **(extra_config or {})}
+    return res, save_run(out, name, res, src, ref, cfg, tr, crs)
 
 
 def _register_one(src, side, ref_shape, gsd_src, gsd_ref, matcher, model, balance):
@@ -61,7 +81,7 @@ def _u8(a):
 def save_run(out, name, r, src, ref, config, transform=None, crs=None):
     d = Path(out) / f"{time.strftime('%Y%m%d-%H%M%S')}_{name}"
     d.mkdir(parents=True, exist_ok=True)
-    cfg = {**config, "thresholds": metrics.THRESHOLDS, "H_src_to_ref": None if r["H"] is None else r["H"].tolist()}
+    cfg = {**config, "src_shape": list(src.shape), "ref_shape": list(ref.shape), "thresholds": metrics.THRESHOLDS, "H_src_to_ref": None if r["H"] is None else r["H"].tolist()}
     (d / "config.json").write_text(json.dumps(cfg, indent=2, default=str))
     (d / "metrics.json").write_text(json.dumps(r["metrics"], indent=2))
     with open(d / "matches.csv", "w", newline="") as fh:

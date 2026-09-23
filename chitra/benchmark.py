@@ -18,6 +18,10 @@ METHODS = {  # name -> register() kwargs
     "CHITRA w/o grid balance": dict(domain="auto", balance=False),
     "CHITRA (full)": dict(domain="auto", balance=True),
 }
+ROMA_METHODS = {  # added with `chitra benchmark --roma`
+    "RoMa v2 (raw images)": dict(domain="reference", balance=True, matcher="roma"),
+    "CHITRA + RoMa v2": dict(domain="auto", balance=True, matcher="roma"),
+}
 
 
 def _row(r, Mt, src_shape):
@@ -27,15 +31,16 @@ def _row(r, Mt, src_shape):
                                  "match_domain")}, "gt_rmse_px": gt}
 
 
-def _case(src, ref, Mt, px, down, dem=None, sun=None):
+def _case(src, ref, Mt, px, down, dem=None, sun=None, methods=METHODS):
     out = {}
-    for name, kw in METHODS.items():
+    for name, kw in methods.items():
         r = pipeline.register(src, ref, dem=dem, sun=sun, gsd_src=px * down, gsd_ref=px, **kw)
         out[name] = (_row(r, Mt, src.shape), r)
     return out
 
 
-def run(out="runs", save_examples=True):
+def run(out="runs", save_examples=True, roma=False):
+    methods = {**METHODS, **ROMA_METHODS} if roma else METHODS
     rows, examples = [], {}
     for ci, w in enumerate(CROPS):
         dem, tr, crs, px = io.read(DTM, w)
@@ -48,12 +53,12 @@ def run(out="runs", save_examples=True):
             for daz in (30, 90, 150):
                 sun_src = ((SUN_REF[0] + daz) % 360, 20.0)
                 src, Mt = render.synthetic_source(render.shade(dem, px, *sun_src), M, SRC, down, seed=ci)
-                for name, (row, r) in _case(src, ref_syn, Mt, px, down, dem, sun_src).items():
+                for name, (row, r) in _case(src, ref_syn, Mt, px, down, dem, sun_src, methods).items():
                     rows.append({"set": "SYN", "crop": ci, "daz": daz, "scale": down, "method": name, **row})
                     if ci == 1 and daz == 150 and down == 1 and name == "CHITRA (full)":
                         examples["syn_daz150"] = (r, src, ref_syn, tr, crs)
             src, Mt = render.synthetic_source(np.nan_to_num(B, nan=np.nanmean(B)), M, SRC, down, seed=ci)
-            for name, (row, r) in _case(src, A, Mt, px, down, dem, sun_b[:2]).items():
+            for name, (row, r) in _case(src, A, Mt, px, down, dem, sun_b[:2], methods).items():
                 rows.append({"set": "REAL-NAC", "crop": ci, "daz": None, "scale": down, "method": name,
                              "sun_fit_b": sun_b[:2], **row})
                 if ci == 1 and down == 1 and name == "CHITRA (full)":
@@ -62,7 +67,7 @@ def run(out="runs", save_examples=True):
     d0, _, _, px = io.read(DTM, CROPS[0])
     d2, *_ = io.read(DTM, CROPS[2])
     src, Mt = render.synthetic_source(render.shade(d0, px, 300, 20), render.similarity(d0.shape, **WARP, size_src=SRC), SRC)
-    for name, kw in METHODS.items():
+    for name, kw in methods.items():
         r = pipeline.register(src, render.shade(d2, px, *SUN_REF), dem=d2, sun=(300, 20), gsd_src=px, gsd_ref=px, **kw)
         rows.append({"set": "NEG", "crop": "0 vs 2", "daz": 30, "scale": 1, "method": name, **_row(r, Mt, src.shape)})
         if name == "CHITRA (full)":
@@ -70,7 +75,7 @@ def run(out="runs", save_examples=True):
 
     Path(out).mkdir(exist_ok=True)
     Path(out, "benchmark.json").write_text(json.dumps(rows, indent=1, default=str))
-    md = table(rows)
+    md = table(rows, list(methods))
     Path(out, "benchmark.md").write_text(md)
     if save_examples:
         for k, (r, s, ref, tr, crs) in examples.items():
@@ -78,7 +83,7 @@ def run(out="runs", save_examples=True):
     return rows, md
 
 
-def table(rows):
+def table(rows, methods=tuple(METHODS)):
     def agg(sel):
         ok = [r for r in sel if r["verdict"] != "REJECT"]
         gts = [r["gt_rmse_px"] for r in ok if r["gt_rmse_px"] is not None]
@@ -93,7 +98,7 @@ def table(rows):
     for s in ("SYN", "REAL-NAC", "NEG"):
         keys = sorted({(r["daz"] or 0, r["scale"]) for r in rows if r["set"] == s}, key=lambda k: (k[1], k[0]))
         for daz, sc in keys:
-            for meth in METHODS:
+            for meth in methods:
                 sel = [r for r in rows if r["set"] == s and (r["daz"] or 0) == daz and r["scale"] == sc
                        and r["method"] == meth]
                 if s == "NEG":

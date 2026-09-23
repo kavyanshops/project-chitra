@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHITRA Registration Console</title>
+<meta name="description" content="CHITRA: Sun-angle and scale invariant registration of Chandrayaan-2 OHRC / TMC-2 / IIRS imagery. SIH 2026 PS 26166.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --panel-2:#eef1f5; --line:#d8dde5; --text:#141a22; --muted:#5b6675;
+  --accent:#1f5fbf; --accent-soft:#e3ecfa; --pass:#12805c; --pass-soft:#dff3ea; --flag:#a86200; --flag-soft:#fbeed8;
+  --reject:#c0342b; --reject-soft:#fbe3e1; --heat:31,95,191; --shadow:0 1px 2px rgba(20,26,34,.06),0 4px 16px rgba(20,26,34,.05);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0b0f15; --panel:#121821; --panel-2:#18202b; --line:#253041; --text:#e6ebf2; --muted:#8d99aa;
+  --accent:#6ea8ff; --accent-soft:#16263f; --pass:#3ecf98; --pass-soft:#0f2a22; --flag:#f0a640; --flag-soft:#2d2211;
+  --reject:#ff6b61; --reject-soft:#2e1614; --heat:110,168,255; --shadow:0 1px 2px rgba(0,0,0,.4);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f15; --panel:#121821; --panel-2:#18202b; --line:#253041; --text:#e6ebf2; --muted:#8d99aa;
+  --accent:#6ea8ff; --accent-soft:#16263f; --pass:#3ecf98; --pass-soft:#0f2a22; --flag:#f0a640; --flag-soft:#2d2211;
+  --reject:#ff6b61; --reject-soft:#2e1614; --heat:110,168,255; --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.mono,code,td.num{font-family:"IBM Plex Mono",ui-monospace,monospace}
+a{color:var(--accent)}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+header{border-bottom:1px solid var(--line);background:var(--panel)}
+.top{display:flex;align-items:center;gap:16px;padding:14px 0;flex-wrap:wrap}
+.logo{font-weight:700;letter-spacing:.14em;font-size:20px}
+.logo span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px;flex:1;min-width:240px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.live .dot{background:var(--pass)}
+button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:32px 0 12px;font-weight:600}
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.hero .v{font-size:26px;font-weight:600;font-family:"IBM Plex Mono",monospace}
+.hero .k{font-size:12px;color:var(--muted)}
+.hero .n{font-size:12px;color:var(--muted);margin-top:4px}
+.pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.pipe div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;position:relative}
+.pipe b{display:block;font-size:11px;color:var(--accent);letter-spacing:.1em}
+@media (max-width:900px){.pipe{grid-template-columns:repeat(2,1fr)}}
+.main{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.list{display:flex;flex-direction:column;gap:6px}
+.grp{font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin:10px 2px 2px}
+.run{text-align:left;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line);width:100%}
+.run.sel{border-color:var(--accent);background:var(--accent-soft)}
+.run .t{font-weight:500;font-size:13.5px}
+.run .m{font-size:12px;color:var(--muted)}
+.badge{font:600 11px "IBM Plex Mono",monospace;padding:2px 8px;border-radius:6px;letter-spacing:.05em;flex:none}
+.PASS{color:var(--pass);background:var(--pass-soft)} .FLAG{color:var(--flag);background:var(--flag-soft)} .REJECT{color:var(--reject);background:var(--reject-soft)}
+.detail h3{margin:0;font-size:20px}
+.desc{color:var(--muted);margin:6px 0 0;max-width:80ch}
+.vrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.vrow .badge{font-size:14px;padding:5px 12px}
+.reason{font:12px "IBM Plex Mono",monospace;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:2px 8px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.metrics .card{padding:10px 12px}
+.metrics .v{font:500 19px "IBM Plex Mono",monospace}
+.metrics .k{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 8px}
+.tabs button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.viewer{background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line);min-height:200px;display:flex;align-items:center;justify-content:center}
+.viewer img{max-width:100%;max-height:70vh;display:block}
+.viewer .none{color:#8d99aa;padding:40px;text-align:center;font-size:14px}
+.cap{font-size:12.5px;color:var(--muted);margin-top:6px}
+.two{display:grid;grid-template-columns:1fr 260px;gap:16px;margin-top:16px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.heat{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;aspect-ratio:1;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.heat div{background:var(--panel)}
+.dl{display:flex;flex-wrap:wrap;gap:6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px;background:var(--panel-2)}
+td.num{text-align:right}
+tr.best td{background:var(--accent-soft)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text)}
+.note{font-size:13px;color:var(--muted);max-width:90ch}
+.notes li{margin:6px 0}
+footer{border-top:1px solid var(--line);margin-top:40px;padding:20px 0 40px;color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+.busy{opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<header><div class="wrap top">
+  <div class="logo">CHI<span>TRA</span></div>
+  <div class="sub">Chandrayaan High-precision Image Transformation &amp; Registration Algorithm · SIH 2026 · PS 26166 · Team Death Eaters</div>
+  <span id="mode" class="chip"><span class="dot"></span><span>loading…</span></span>
+  <button id="theme" title="Toggle light/dark">◐</button>
+</div></header>
+
+<main class="wrap">
+  <section class="hero" id="hero"></section>
+
+  <h2>Pipeline: Render-and-Match</h2>
+  <div class="pipe">
+    <div><b>01 PREPARE</b>PDS4 crop, north-up from the geometry grid, common GSD</div>
+    <div><b>02 RENDER</b>DEM shaded by Hapke at the <em>source</em> Sun</div>
+    <div><b>03 MATCH</b>RoMa v2 (DINOv3) dense warp; SIFT baseline</div>
+    <div><b>04 GEOMETRY</b>8×8 grid-balanced sampling → MAGSAC++</div>
+    <div><b>05 VERIFY</b>RMSE · inliers · coverage entropy → verdict</div>
+    <div><b>06 OUTPUT</b>GeoTIFF · match CSV · metrics JSON</div>
+  </div>
+
+  <h2>Registration runs</h2>
+  <div class="main">
+    <nav class="list" id="runs"></nav>
+    <section class="detail" id="detail"></section>
+  </div>
+
+  <h2>Benchmark (Apollo 11, known ground truth)</h2>
+  <p class="note">Source images are warped by a <b>known</b> transform, so the error is exact: GT RMSE = RMS error of the estimated transform over a 32×32 grid, in <b>source pixels</b>. "Sub-px success" = not rejected and GT RMSE &lt; 1 px, over 3 crops.</p>
+  <div class="scroll"><table id="bench"><tbody><tr><td>loading…</td></tr></tbody></table></div>
+
+  <section id="upload-sec" class="hidden">
+    <h2>Register your own pair</h2>
+    <div class="card">
+      <form id="upload">
+        <label>Source (moving) · GeoTIFF / PNG / JPG<input type="file" name="src" required accept=".tif,.tiff,.png,.jpg,.jpeg"></label>
+        <label>Reference (fixed) · GeoTIFF preferred<input type="file" name="ref" required accept=".tif,.tiff,.png,.jpg,.jpeg"></label>
+        <label>DEM on the reference grid (optional → Render-and-Match)<input type="file" name="dem" accept=".tif,.tiff"></label>
+        <label>Source Sun azimuth (° clockwise from N)<input type="number" name="sun_az" step="any" min="0" max="360" placeholder="e.g. 104.27"></label>
+        <label>Source Sun elevation (°)<input type="number" name="sun_el" step="any" min="-5" max="90" placeholder="e.g. 44.0"></label>
+        <label>Source GSD (m/px)<input type="number" name="src_gsd" step="any" min="0" placeholder="from raster if blank"></label>
+        <label>Reference GSD (m/px)<input type="number" name="ref_gsd" step="any" min="0" placeholder="from raster if blank"></label>
+        <label>Matcher<select name="matcher"><option value="auto">auto (RoMa v2 if installed)</option><option value="roma">RoMa v2</option><option value="sift">SIFT</option></select></label>
+        <label>Transform<select name="model"><option value="affine">affine</option><option value="homography">homography</option></select></label>
+        <label>Run name<input name="name" maxlength="40" value="upload" pattern="[A-Za-z0-9_-]+"></label>
+        <label>&nbsp;<button class="primary" type="submit">Register</button></label>
+      </form>
+      <p class="note" id="upload-msg">Chandrayaan-2 PDS4 products: cut them first with <code>scripts/prep_ch2.py</code>, which writes <code>src.tif</code>, <code>ref.tif</code> and <code>dem.tif</code>.</p>
+    </div>
+  </section>
+
+  <h2>Read these results honestly</h2>
+  <ul class="note notes">
+    <li>Real Chandrayaan-2 runs have no independent check points, so RMSE there is transform self-consistency on the inliers, not ground-truth error.</li>
+    <li>Synthetic (SYN) sources come from the same renderer CHITRA uses, so they are an upper bound for Render-and-Match.</li>
+    <li>"Sub-pixel on OHRC↔NAC" is a target that these runs support. Literature numbers (SIFT IIRS→WAC ≈73 m, a preprint; CNSFM 72.3 % polar) are cited baselines, not ours.</li>
+  </ul>
+</main>
+<footer><div class="wrap">Data: LROC / PDS (public domain); Chandrayaan-2 © ISRO / ISSDC PRADAN. Code: <a href="https://github.com/kavyanshops/project-chitra">github.com/kavyanshops/project-chitra</a></div></footer>
+
+<script>
+const INFO = { // run name -> [group, title, description]
+  ohrc_ncp: ["Chandrayaan-2 · real", "OHRC → LRO NAC 0.5 m", "OHRC ch2_ohr_ncp_20240330 (0.31 m/px, Sun el 7.3°) registered to the NAC orthophoto of the Apollo 11 site. The label geolocation (uncorrected, 'System') was off by 2.16 km; CHITRA found the true position with no manual GCPs. The scene's east part lies beyond the NAC orthophoto edge, hence the empty right half of the density map."],
+  tmc2_ncf_roma: ["Chandrayaan-2 · real", "TMC-2 → LRO NAC · RoMa v2 + render", "TMC-2 fore strip ch2_tmc_ncf_20250207 (5.0 m/px). The Sun is from the east (az 104°) but from the west in the NAC reference: crater shading is inverted. Matching the Sun-matched DTM render wins. Agrees with the SELENE-refined label to 11.6 m (≈2 px)."],
+  tmc2_ncf_roma_rawref: ["Ablation", "TMC-2 → NAC · RoMa v2 on the raw ortho", "Same pair, without Render-and-Match: 3× fewer inliers and an inlier ratio of 0.30 instead of 0.88."],
+  tmc2_ncf: ["Ablation", "TMC-2 → NAC · SIFT", "The classical matcher cannot bridge a ~166° Sun-azimuth change. CHITRA refuses instead of returning a wrong transform."],
+  syn_daz150: ["Benchmark · exact truth", "Synthetic Δ Sun az 150°", "DTM rendered at two Sun geometries plus a known 8° warp. GT RMSE in the benchmark table."],
+  real_nac: ["Benchmark · exact truth", "LROC NAC ortho pair + known warp", "Two real NAC orthophotos (different orbits) with a known warp applied."],
+  neg: ["Safety", "Non-overlapping pair", "Two tiles that do not overlap: CHITRA must REJECT, and does."],
+};
+const GROUPS = ["Chandrayaan-2 · real", "Benchmark · exact truth", "Ablation", "Safety", "Your uploads"];
+const IMGS = [["overlay_matches","Matches","Inlier (green) and outlier (red) correspondences, sample of 150; reference scaled to the source height."],
+              ["checkerboard","Checkerboard","Registered source and reference in alternating tiles: features should continue across tile edges."],
+              ["overlay_residuals","Residuals ×20","Inlier residual vectors magnified 20×."],
+              ["render","Sun-matched render","Reference DEM shaded by the Hapke-family model at the source Sun geometry."]];
+const $ = s => document.querySelector(s);
+const fmt = (v, d=2) => v == null || Number.isNaN(v) ? "–" : (typeof v === "number" ? v.toFixed(d) : v);
+const nameOf = id => id.replace(/^\d{8}-\d{6}_/, "");
+let RUNS = [], LIVE = false, current = null, tab = "overlay_matches";
+
+try { const t = localStorage.getItem("chitra-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+$("#theme").onclick = () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("chitra-theme", next); } catch (e) {}
+};
+
+async function getJSON(live, fallback) {
+  try { const r = await fetch(live); if (r.ok) return [await r.json(), true]; } catch (e) {}
+  const r = await fetch(fallback); if (!r.ok) throw new Error(fallback); return [await r.json(), false];
+}
+
+async function load() {
+  [RUNS, LIVE] = await getJSON("api/runs", "runs.json");
+  const latest = new Map();  // newest run per name
+  for (const r of RUNS) if (!latest.has(nameOf(r.id))) latest.set(nameOf(r.id), r);
+  RUNS = [...latest.values()];
+  $("#mode").className = "chip" + (LIVE ? " live" : "");
+  $("#mode").lastElementChild.textContent = LIVE ? "live engine" : "static results";
+  $("#upload-sec").classList.toggle("hidden", !LIVE);
+  hero(); list(); select((RUNS.find(r => nameOf(r.id) === "ohrc_ncp") || RUNS[0])?.id);
+  try { bench((await getJSON("api/benchmark", "benchmark.json"))[0]); }
+  catch (e) { $("#bench").innerHTML = "<tbody><tr><td>No benchmark yet: run <code>uv run chitra benchmark</code>.</td></tr></tbody>"; }
+}
+
+function hero() {
+  const by = n => RUNS.find(r => nameOf(r.id) === n)?.metrics;
+  const o = by("ohrc_ncp"), t = by("tmc2_ncf_roma"), raw = by("tmc2_ncf_roma_rawref");
+  const cards = [
+    o && [fmt(o.rmse_px) + " px", "OHRC → NAC RMSE (fit)", `${o.inliers} inliers · ${fmt(o.rmse_m)} m · ${o.verdict}`],
+    t && [fmt(t.inlier_ratio) + (raw ? ` vs ${fmt(raw.inlier_ratio)}` : ""), "TMC-2 inlier ratio, render vs raw", "~166° Sun-azimuth change, RoMa v2"],
+    o && ["2.16 km", "OHRC label geolocation error found", "0 manual control points"],
+    ["0/3 → 3/3", "RoMa v2 at Δ Sun az 150°: raw vs render", "exact ground truth · GT RMSE ≈0.1 px with the render"],
+  ].filter(Boolean);
+  $("#hero").innerHTML = cards.map(([v, k, n]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
+}
+
+function info(r) {
+  const n = nameOf(r.id);
+  return INFO[n] || ["Your uploads", n, `Uploaded pair · matcher ${r.config.matcher || "?"}`];
+}
+
+function list() {
+  const html = [];
+  for (const g of GROUPS) {
+    const rs = RUNS.filter(r => info(r)[0] === g);
+    if (!rs.length) continue;
+    html.push(`<div class="grp">${g}</div>`);
+    for (const r of rs) {
+      const m = r.metrics;
+      html.push(`<button class="run" data-id="${r.id}"><span class="badge ${m.verdict}">${m.verdict}</span>
+        <span><span class="t">${info(r)[1]}</span><br><span class="m mono">${m.inliers} inl · ${m.rmse_px != null ? fmt(m.rmse_px) + " px" : "no fit"}</span></span></button>`);
+    }
+  }
+  $("#runs").innerHTML = html.join("");
+  $("#runs").querySelectorAll(".run").forEach(b => b.onclick = () => select(b.dataset.id));
+}
+
+function select(id) {
+  current = RUNS.find(r => r.id === id); if (!current) return;
+  $("#runs").querySelectorAll(".run").forEach(b => b.classList.toggle("sel", b.dataset.id === id));
+  const r = current, m = r.metrics, [, title, desc] = info(r), c = r.config || {};
+  const sun = c.sun_used ? `az ${fmt(c.sun_used[0], 1)}°, el ${fmt(c.sun_used[1], 1)}°` : "–";
+  const cards = [
+    ["RMSE (fit)", m.rmse_px != null ? fmt(m.rmse_px, 3) + " px" : "–"], ["RMSE (metres)", m.rmse_m != null ? fmt(m.rmse_m) + " m" : "–"],
+    ["Median / P90", m.median_px != null ? `${fmt(m.median_px)} / ${fmt(m.p90_px)}` : "–"],
+    ["Inliers", `${m.inliers} / ${m.n_candidates}`], ["Inlier ratio", fmt(m.inlier_ratio, 3)],
+    ["Coverage entropy", fmt(m.coverage_entropy, 3)], ["Shadow fraction", fmt(m.shadow_fraction, 3)],
+    ["Match domain", m.match_domain || "–"], ["Matcher", c.matcher || (c.benchmark_case ? "sift" : "–")], ["Source Sun", sun],
+  ];
+  const imgs = IMGS.filter(([k]) => r.files.includes(k + ".png") || r.files.includes(k + ".preview.jpg"));
+  if (!imgs.find(([k]) => k === tab)) tab = imgs[0]?.[0];
+  const dl = ["registered.tif", "matches.csv", "metrics.json", "config.json"].filter(f => r.files.includes(f));
+  $("#detail").innerHTML = `
+    <h3>${title}</h3><p class="desc">${desc}</p>
+    <div class="vrow"><span class="badge ${m.verdict}">${m.verdict}</span>${(m.reasons || []).map(x => `<span class="reason">${x}</span>`).join("") || '<span class="reason">all checks passed</span>'}<span class="reason">${r.id}</span></div>
+    <div class="metrics">${cards.map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")}</div>
+    <div class="tabs">${imgs.map(([k, l]) => `<button data-k="${k}" class="${k === tab ? "on" : ""}">${l}</button>`).join("")}</div>
+    <div class="viewer" id="viewer"></div><div class="cap" id="cap"></div>
+    <div class="two">
+      <div><div class="k note">Downloads</div><div class="dl">${dl.map(f => `<a class="btn" href="runs/${r.id}/${f}" download>${f}</a>`).join("") || '<span class="note">none (rejected runs write no registered product)</span>'}</div></div>
+      <div><div class="note">Inlier density over the source (8×8), the PS "uniform distribution" requirement</div><div class="heat" id="heat"></div></div>
+    </div>`;
+  $("#detail").querySelectorAll(".tabs button").forEach(b => b.onclick = () => { tab = b.dataset.k; show(); $("#detail").querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b)); });
+  show(); heat();
+}
+
+function show() {
+  const r = current, it = IMGS.find(([k]) => k === tab);
+  if (!it) { $("#viewer").innerHTML = '<div class="none">No images for this run.</div>'; return; }
+  $("#viewer").innerHTML = `<img alt="${it[1]} for ${r.id}" src="runs/${r.id}/${it[0]}.preview.jpg">`;
+  $("#cap").textContent = it[2];
+}
+
+async function heat() {
+  const r = current, el = $("#heat");
+  el.innerHTML = Array(64).fill("<div></div>").join("");
+  if (!r.files.includes("matches.csv")) return;
+  const rows = (await (await fetch(`runs/${r.id}/matches.csv`)).text()).trim().split("\n").slice(1).map(l => l.split(",").map(Number));
+  if (r !== current || !rows.length) return;
+  const [h, w] = r.config?.src_shape || [Math.max(...rows.map(x => x[1])) + 1, Math.max(...rows.map(x => x[0])) + 1];
+  const n = Array(64).fill(0); let tot = 0;
+  for (const [x, y, , , , inl] of rows) if (inl) { n[Math.min(7, Math.floor(y * 8 / h)) * 8 + Math.min(7, Math.floor(x * 8 / w))]++; tot++; }
+  const mx = Math.max(1, ...n);
+  el.innerHTML = n.map(v => `<div title="${v} inliers" style="background:${v ? `rgba(var(--heat),${(0.15 + 0.85 * v / mx).toFixed(2)})` : "var(--panel)"}"></div>`).join("");
+}
+
+function bench(rows) {
+  const keyOf = r => `${r.set}|${r.daz ?? 0}|${r.scale}|${r.method}`, groups = new Map();
+  for (const r of rows) { const k = keyOf(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+  const mean = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  const body = [...groups.values()].map(sel => {
+    const r0 = sel[0], ok = sel.filter(r => r.verdict !== "REJECT"), gts = ok.map(r => r.gt_rmse_px).filter(v => v != null);
+    const sub = ok.filter(r => r.gt_rmse_px != null && r.gt_rmse_px < 1).length;
+    const neg = r0.set === "NEG";
+    const res = neg ? sel.map(r => r.verdict).join(", ") : `${sub}/${sel.length}`;
+    return `<tr class="${r0.method === "CHITRA (full)" ? "best" : ""}"><td>${r0.set}</td><td>${neg ? "–" : r0.set === "SYN" ? r0.daz + "°" : "≈0° (real)"}</td><td>${r0.scale}×</td><td>${r0.method}</td>
+      <td class="num">${res}</td><td class="num">${fmt(mean(gts), 3)}</td><td class="num">${Math.round(mean(sel.map(r => r.inliers)))}</td>
+      <td class="num">${fmt(mean(ok.map(r => r.inlier_ratio)), 3)}</td><td class="num">${fmt(mean(ok.map(r => r.coverage_entropy)), 3)}</td></tr>`;
+  }).join("");
+  $("#bench").innerHTML = `<thead><tr><th>Set</th><th>Δ Sun az</th><th>Scale</th><th>Method</th><th>Sub-px success</th><th>GT RMSE (src px)</th><th>Inliers</th><th>Inlier ratio</th><th>Coverage entropy</th></tr></thead><tbody>${body}</tbody>`;
+}
+
+$("#upload").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target, fd = new FormData(f), msg = $("#upload-msg");
+  for (const [k, v] of [...fd.entries()]) if (v === "" || (v instanceof File && !v.name)) fd.delete(k);
+  f.classList.add("busy"); msg.textContent = "Registering… (RoMa v2 takes ~20 s on a laptop)";
+  try {
+    const r = await fetch("api/register", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail));
+    msg.textContent = `Done: ${j.metrics.verdict} (${j.metrics.inliers} inliers).`;
+    await load(); select(j.id);
+  } catch (err) { msg.textContent = "Failed: " + err.message; }
+  finally { f.classList.remove("busy"); }
+};
+
+load().catch(e => { $("#detail").innerHTML = `<p class="note">Could not load runs (${e.message}).</p>`; });
+</script>
+</body>
+</html>
