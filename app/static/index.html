@@ -173,7 +173,7 @@ const IMGS = [["overlay_matches","Matches","Inlier (green) and outlier (red) cor
 const $ = s => document.querySelector(s);
 const fmt = (v, d=2) => v == null || Number.isNaN(v) ? "–" : (typeof v === "number" ? v.toFixed(d) : v);
 const nameOf = id => id.replace(/^\d{8}-\d{6}_/, "");
-let RUNS = [], LIVE = false, current = null, tab = "overlay_matches";
+let RUNS = [], LIVE = false, BASE = "", current = null, tab = "overlay_matches";  // BASE: engine URL prefix
 
 try { const t = localStorage.getItem("chitra-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 $("#theme").onclick = () => {
@@ -184,13 +184,30 @@ $("#theme").onclick = () => {
   try { localStorage.setItem("chitra-theme", next); } catch (e) {}
 };
 
-async function getJSON(live, fallback) {
-  try { const r = await fetch(live); if (r.ok) return [await r.json(), true]; } catch (e) {}
-  const r = await fetch(fallback); if (!r.ok) throw new Error(fallback); return [await r.json(), false];
+async function liveBase() {  // live.json {"api": "https://…"} points a static host (Vercel) at a running engine
+  try { const j = await (await fetch("live.json", { cache: "no-store" })).json(); return j.api ? j.api.replace(/\/?$/, "/") : null; }
+  catch (e) { return null; }
+}
+
+async function findEngine() {  // same-origin engine first, then live.json; null -> static results
+  for (const base of ["", await liveBase()]) {
+    if (base === null) continue;
+    try {
+      const r = await fetch(base + "api/runs", { signal: AbortSignal.timeout(6000) });
+      if (r.ok) { BASE = base; return await r.json(); }
+    } catch (e) {}
+  }
+  return null;
+}
+
+async function getJSON(path, fallback) {
+  const r = await fetch(LIVE ? BASE + path : fallback); if (!r.ok) throw new Error(path); return r.json();
 }
 
 async function load() {
-  [RUNS, LIVE] = await getJSON("api/runs", "runs.json");
+  const live = await findEngine();
+  LIVE = live !== null;
+  RUNS = live || await getJSON("", "runs.json");
   const latest = new Map();  // newest run per name
   for (const r of RUNS) if (!latest.has(nameOf(r.id))) latest.set(nameOf(r.id), r);
   RUNS = [...latest.values()];
@@ -198,7 +215,7 @@ async function load() {
   $("#mode").lastElementChild.textContent = LIVE ? "live engine" : "static results";
   $("#upload-sec").classList.toggle("hidden", !LIVE);
   hero(); list(); select((RUNS.find(r => nameOf(r.id) === "ohrc_ncp") || RUNS[0])?.id);
-  try { bench((await getJSON("api/benchmark", "benchmark.json"))[0]); }
+  try { bench(await getJSON("api/benchmark", "benchmark.json")); }
   catch (e) { $("#bench").innerHTML = "<tbody><tr><td>No benchmark yet: run <code>uv run chitra benchmark</code>.</td></tr></tbody>"; }
 }
 
@@ -257,7 +274,7 @@ function select(id) {
     <div class="tabs">${imgs.map(([k, l]) => `<button data-k="${k}" class="${k === tab ? "on" : ""}">${l}</button>`).join("")}</div>
     <div class="viewer" id="viewer"></div><div class="cap" id="cap"></div>
     <div class="two">
-      <div><div class="k note">Downloads</div><div class="dl">${dl.map(f => `<a class="btn" href="runs/${r.id}/${f}" download>${f}</a>`).join("") || '<span class="note">none (rejected runs write no registered product)</span>'}</div></div>
+      <div><div class="k note">Downloads</div><div class="dl">${dl.map(f => `<a class="btn" href="${BASE}runs/${r.id}/${f}" download>${f}</a>`).join("") || '<span class="note">none (rejected runs write no registered product)</span>'}</div></div>
       <div><div class="note">Inlier density over the source (8×8), the PS "uniform distribution" requirement</div><div class="heat" id="heat"></div></div>
     </div>`;
   $("#detail").querySelectorAll(".tabs button").forEach(b => b.onclick = () => { tab = b.dataset.k; show(); $("#detail").querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b)); });
@@ -267,7 +284,7 @@ function select(id) {
 function show() {
   const r = current, it = IMGS.find(([k]) => k === tab);
   if (!it) { $("#viewer").innerHTML = '<div class="none">No images for this run.</div>'; return; }
-  $("#viewer").innerHTML = `<img alt="${it[1]} for ${r.id}" src="runs/${r.id}/${it[0]}.preview.jpg">`;
+  $("#viewer").innerHTML = `<img alt="${it[1]} for ${r.id}" src="${BASE}runs/${r.id}/${it[0]}.preview.jpg">`;
   $("#cap").textContent = it[2];
 }
 
@@ -275,7 +292,7 @@ async function heat() {
   const r = current, el = $("#heat");
   el.innerHTML = Array(64).fill("<div></div>").join("");
   if (!r.files.includes("matches.csv")) return;
-  const rows = (await (await fetch(`runs/${r.id}/matches.csv`)).text()).trim().split("\n").slice(1).map(l => l.split(",").map(Number));
+  const rows = (await (await fetch(`${BASE}runs/${r.id}/matches.csv`)).text()).trim().split("\n").slice(1).map(l => l.split(",").map(Number));
   if (r !== current || !rows.length) return;
   const [h, w] = r.config?.src_shape || [Math.max(...rows.map(x => x[1])) + 1, Math.max(...rows.map(x => x[0])) + 1];
   const n = Array(64).fill(0); let tot = 0;
@@ -306,7 +323,7 @@ $("#upload").onsubmit = async e => {
   for (const [k, v] of [...fd.entries()]) if (v === "" || (v instanceof File && !v.name)) fd.delete(k);
   f.classList.add("busy"); msg.textContent = "Registering… (RoMa v2 takes ~20 s on a laptop)";
   try {
-    const r = await fetch("api/register", { method: "POST", body: fd });
+    const r = await fetch(BASE + "api/register", { method: "POST", body: fd });
     const j = await r.json();
     if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail));
     msg.textContent = `Done: ${j.metrics.verdict} (${j.metrics.inliers} inliers).`;
