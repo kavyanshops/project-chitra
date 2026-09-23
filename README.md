@@ -4,10 +4,12 @@
 
 Sun-angle- and scale-invariant registration of Chandrayaan-2 **OHRC / TMC-2 / IIRS** imagery to lunar references (**LRO NAC / WAC, SELENE TC**).
 CHITRA renders the reference DEM under the **source's own Sun geometry** (Hapke-family reflectance + cast shadows), so the illumination
-difference is removed before matching. It then fits **MAGSAC++** on **grid-balanced** matches and writes a registered GeoTIFF, the match points,
+difference is removed before matching. It then matches densely with **RoMa v2 (DINOv3)**, fits **MAGSAC++** on **grid-balanced** matches and writes a registered GeoTIFF, the match points,
 RMSE / inlier / coverage metrics and a **PASS / FLAG / REJECT verdict**.
 
-Runs on a laptop CPU (developed on an Apple M4): the full benchmark below takes **≈18 s**.
+Runs on a 16 GB laptop (Apple M4, RoMa v2 on the MPS GPU: ~18 s and ~2 GB RAM per pair) and on a free Colab GPU.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kavyanshops/project-chitra/blob/main/notebooks/chitra_colab.ipynb)
 
 ## What the problem statement asks → where CHITRA delivers it
 
@@ -21,40 +23,35 @@ Runs on a laptop CPU (developed on an Apple M4): the full benchmark below takes 
 | Registered product + match points | `registered.tif` (on the reference grid/CRS) + `matches.csv` |
 | Evaluation metrics | RMSE, median, P90, inlier count, inlier ratio, coverage entropy → `metrics.json` |
 
-## Results (measured with `uv run chitra benchmark`)
+## Results (measured with `uv run chitra benchmark --roma`, Apple M4, ≈6 min)
 
 Apollo 11 site, LROC NAC DTM (2 m/px), three 768×768 px crops (1.5 km). Every source is warped by a **known** similarity (8° rotation +
 sub-pixel shift), and optionally downscaled 4×, so the error is measured exactly: **GT RMSE** = RMS error of the estimated transform over a
 32×32 grid of source points, in **source pixels**. "Sub-px success" = not rejected **and** GT RMSE < 1 px.
 
-| Set | Δ Sun az | Scale | Method | Sub-px success | GT RMSE (src px) | Inliers | Inlier ratio | Coverage entropy |
-|---|---|---|---|---|---|---|---|---|
-| SYN | 30° | 1× | SIFT (raw images) | 1/3 | 0.318 | 23 | 0.603 | 0.733 |
-| SYN | 30° | 1× | CHITRA (full) | **3/3** | **0.052** | 2497 | 0.998 | 0.999 |
-| SYN | 90° | 1× | SIFT (raw images) | 0/3 | – | 3 | – | – |
-| SYN | 90° | 1× | CHITRA (full) | **3/3** | **0.050** | 2493 | 0.998 | 0.998 |
-| SYN | 150° | 1× | SIFT (raw images) | 0/3 | – | 3 | – | – |
-| SYN | 150° | 1× | CHITRA (full) | **3/3** | **0.048** | 2483 | 0.998 | 0.998 |
-| SYN | 30° | 4× | SIFT (raw images) | 0/3 | – | 4 | – | – |
-| SYN | 30° | 4× | CHITRA (full) | **3/3** | **0.064** | 169 | 0.984 | 0.932 |
-| SYN | 90° | 4× | SIFT (raw images) | 0/3 | – | 0 | – | – |
-| SYN | 90° | 4× | CHITRA (full) | **3/3** | **0.081** | 168 | 0.984 | 0.941 |
-| SYN | 150° | 4× | SIFT (raw images) | 0/3 | – | 0 | – | – |
-| SYN | 150° | 4× | CHITRA (full) | **3/3** | **0.062** | 190 | 0.995 | 0.938 |
-| REAL-NAC | ≈0° | 1× | SIFT (raw images) | 3/3 | 0.108 | 1977 | 0.963 | 0.994 |
-| REAL-NAC | ≈0° | 1× | CHITRA (full) | 3/3 | 0.109 | 1948 | 0.964 | 0.995 |
-| REAL-NAC | ≈0° | 4× | SIFT (raw images) | 3/3 | 0.096 | 125 | 0.974 | 0.907 |
-| REAL-NAC | ≈0° | 4× | CHITRA (full) | 3/3 | 0.096 | 125 | 0.974 | 0.907 |
-| NEG (no overlap) | – | 1× | CHITRA (full) | **REJECT** (too_few_inliers, matches_clustered, inconsistent_geometry) | – | 3 | – | – |
+Each cell: sub-pixel successes out of 3 crops · mean GT RMSE of those successes.
 
-The full table, including the "without grid balancing" ablation, is written to `runs/benchmark.md`.
+| Set | Δ Sun az | Scale | SIFT on raw images | RoMa v2 on raw images | CHITRA · SIFT on render | **CHITRA · RoMa v2 on render** |
+|---|---|---|---|---|---|---|
+| SYN | 30° | 1× | 1/3 · 0.318 px | 3/3 · 0.100 px | 3/3 · 0.052 px | 3/3 · 0.101 px |
+| SYN | 90° | 1× | 0/3 | 0/3 | 3/3 · 0.050 px | 3/3 · 0.125 px |
+| SYN | 150° | 1× | 0/3 | 0/3 | 3/3 · 0.048 px | 3/3 · 0.105 px |
+| SYN | 30° | 4× | 0/3 | 3/3 · 0.076 px | 3/3 · 0.064 px | 3/3 · 0.076 px |
+| SYN | 90° | 4× | 0/3 | 2/3 · 0.821 px | 3/3 · 0.081 px | 3/3 · 0.101 px |
+| SYN | 150° | 4× | 0/3 | 0/3 | 3/3 · 0.062 px | 3/3 · 0.109 px |
+| REAL-NAC | ≈0° (real) | 1× | 3/3 · 0.108 px | 3/3 · 0.145 px | 3/3 · 0.109 px | 3/3 · 0.145 px |
+| REAL-NAC | ≈0° (real) | 4× | 3/3 · 0.096 px | 3/3 · 0.108 px | 3/3 · 0.096 px | 3/3 · 0.108 px |
+| NEG (no overlap) | – | 1× | REJECT ✓ | REJECT ✓ | REJECT ✓ | REJECT ✓ |
 
-- **SYN**: source = DTM rendered at Sun (270°+Δ, 20°), reference = DTM rendered at (270°, 30°). Raw SIFT collapses at Δaz ≥ 90° and at 4× scale; CHITRA stays sub-pixel in every case.
+The full table (inliers, inlier ratio, coverage entropy and the "without grid balancing" ablation) is written to `runs/benchmark.md`.
+RoMa rows show 2,560 inliers because grid balancing keeps at most 40 matches per 8×8 cell.
+
+- **SYN**: source = DTM rendered at Sun (270°+Δ, 20°), reference = DTM rendered at (270°, 30°). **Both matchers collapse on raw images once Δaz ≥ 90°**, including the DINOv3-based RoMa v2. With the Sun-matched render, both stay sub-pixel in every case. The physics render is what makes the foundation model work.
 - **REAL-NAC**: source = real LROC ortho M150368601, reference = real LROC ortho M150361817 (different orbits, co-registered by LROC), known warp applied.
 - **NEG**: two non-overlapping tiles. CHITRA refuses instead of returning a matrix.
 
 **Read these numbers honestly:**
-1. In SYN the source is produced by the same renderer CHITRA uses, so the render matches the source photometry exactly. These figures are an **upper bound** for Render-and-Match, not a claim about real Chandrayaan-2 imagery.
+1. In SYN the source is produced by the same renderer CHITRA uses, so the render matches the source photometry exactly. These figures are an **upper bound** for Render-and-Match, not a claim about real Chandrayaan-2 imagery. That is also why SIFT-on-render edges out RoMa-on-render there (0.05 vs 0.10 px). On the real TMC-2 pair, SIFT-on-render is rejected and only RoMa v2 on the render succeeds (next section), so RoMa v2 is the default.
 2. The two real LROC orthos have almost the same Sun geometry: our fit gives azimuth ≈270° for both, **estimated** by fitting DTM renders, since the labels carry no Sun angles. REAL-NAC therefore tests real texture, warp and 4× scale, not a large Sun change. There, `auto` mode picks the real reference because the 2 m DTM render lacks albedo and fine texture.
 3. Grid balancing did not change GT RMSE here, because matches were already well spread (entropy ≥ 0.9). It exists to guard the uniformity requirement on clustered scenes.
 4. Real Chandrayaan-2 runs are in the next section. They have no independent ground truth, so they report fit metrics, not GT RMSE.
@@ -74,17 +71,21 @@ with `scripts/prep_ch2.py`, which reads the PDS4 geometry grid, and then registe
 | Source → reference | Crop (lines, pixels) | Sun (source → ref) | Verdict | Inliers | Inlier ratio | RMSE (fit) | Coverage entropy |
 |---|---|---|---|---|---|---|---|
 | **OHRC** `ch2_ohr_ncp_20240330` → NAC 0.5 m | 0–6300, 0–3700 | az 270°, el 7.3° → az ≈270° | **PASS** | 481 | 0.76 | **0.58 px (0.18 m)** | 0.82 |
-| **TMC-2** fore `ch2_tmc_ncf_20250207` → NAC 2 m | 0–1560, 830–1690 | az 104°, el 44° → az ≈270° (Δaz ≈ 166°) | **REJECT** (too_few_inliers) | 9 | – | – | – |
+| **TMC-2** fore `ch2_tmc_ncf_20250207` → NAC 2 m · **RoMa v2 + render (full CHITRA)** | 0–1560, 830–1690 | az 104°, el 44° → az ≈270° (Δaz ≈ 166°) | **PASS** | **2,256** | **0.88** | **0.53 px (2.7 m)** | **0.99** |
+| ↳ ablation: RoMa v2 on the raw NAC ortho (no render) | same | same | PASS | 768 | 0.30 | 0.64 px | 0.84 |
+| ↳ ablation: SIFT | same | same | REJECT (too_few_inliers) | 9 | – | – | – |
 
 **What these show:**
 - **OHRC:** sub-pixel fit on real 0.3 m Chandrayaan-2 imagery. The recovered scale (0.618) matches the geometry-grid GSD ratio 0.307/0.5 = 0.614. RMSE here is transform self-consistency on the inliers; no independent check points exist yet.
 - **The OHRC label geolocation is off by 2.16 km** (651 m east, 2,060 m north, constant to ±3 m across the scene). This product's label says `reference_data_used: System` (uncorrected). CHITRA found the true position automatically, with zero manual GCPs.
-- **TMC-2 fails honestly.** The Sun comes from nearly opposite sides, so crater shading is inverted: correlation with the NAC ortho at the label position is −0.14. The Sun-matched DTM render correlates positively (+0.24) and the fitted Sun azimuth points east (77°, label 104°), but SIFT finds too few shared keypoints between the albedo-rich TMC-2 image and the smooth 2 m DTM render. CHITRA refuses instead of returning a wrong matrix. This pair is the target case for the RoMa v2 GPU path.
+- **TMC-2 is where Render-and-Match earns its place.** The Sun comes from nearly opposite sides, so crater shading is inverted: correlation with the NAC ortho at the label position is −0.14, while the Sun-matched DTM render correlates +0.24. SIFT is rejected (9 inliers). RoMa v2 against the raw ortho barely passes (inlier ratio 0.30). RoMa v2 against the **render** gives 3× the inliers at ratio 0.88, sub-pixel RMSE and near-uniform coverage. CHITRA picked the render domain automatically. As an independent check, the result agrees with the SELENE-refined label geolocation to **11.6 m on average (≈2 TMC px)**, and the fitted scale matches the grid GSD ratio to 0.1 %.
 - **Orientation from the geometry grid:** the TMC-2 fore strip is rotated 180° (pixels run west, lines run north), not mirrored, and its ground GSD is ~5.0 m, not the label's 4.41 m.
 
 | OHRC → NAC: checkerboard (registered OHRC / NAC tiles) | OHRC → NAC: inlier matches |
 |---|---|
 | ![](docs/img/ohrc_checkerboard.jpg) | ![](docs/img/ohrc_overlay_matches.jpg) |
+| **TMC-2 → NAC (opposite Sun): checkerboard** | **TMC-2 → NAC: inlier matches (RoMa v2 on the render)** |
+| ![](docs/img/tmc2_checkerboard.jpg) | ![](docs/img/tmc2_overlay_matches.jpg) |
 
 Reproduce (the data paths follow [DATA](docs/DATA.md)):
 
@@ -101,9 +102,9 @@ the label position, recovered the same offset from the part of the footprint tha
 ## Run it
 
 ```bash
-uv sync                                   # numpy, opencv-python-headless, rasterio (Python 3.12)
+uv sync --extra roma                      # engine + RoMa v2 (drop --extra roma for SIFT only)
 uv run python tests/test_pipeline.py      # self-check, no data needed
-uv run chitra benchmark                   # needs data/ref (see docs/DATA.md)
+uv run chitra benchmark [--roma]          # needs data/ref (see docs/DATA.md)
 
 uv run chitra register SRC.tif REF.tif \
     --dem DEM_on_REF_grid.tif --sun-az 120 --sun-el 25 \
@@ -114,8 +115,19 @@ Each run writes `runs/<timestamp>_<name>/`: `config.json`, `metrics.json`, `matc
 (`x_src,y_src,x_ref,y_ref,certainty,inlier,residual_px`), `registered.tif`, `overlay_matches.png`, `overlay_residuals.png`,
 `checkerboard.png`, `render.png`. The exit code is 2 on REJECT.
 
-**Matcher.** The local default is SIFT, run on the Sun-matched render. RoMa v2 (DINOv3 ViT-L) is too heavy for a 16 GB laptop, so it is an
-optional GPU extra (`pip install ".[roma]"`, `--matcher roma`) for Colab. **The RoMa path has not been benchmarked yet, and no number above uses it.**
+**Matcher.** `--matcher auto` (default) uses RoMa v2 when installed, else SIFT. RoMa v2 runs in its `precise` setting on CUDA and in the
+640 px `base` setting on Apple MPS / CPU, which fits a 16 GB laptop.
+
+## Demo
+
+```bash
+uv run uvicorn app.main:app --port 8765        # http://localhost:8765 : browse runs, upload a pair, download results
+uv run python scripts/export_site.py           # static copy in site/ (same page, no server) for hosting
+```
+
+The console shows every run with its verdict and reasons, the metric cards, the match / checkerboard / residual / render views, an 8×8
+inlier-density map (the "uniform distribution" requirement), downloads (GeoTIFF, CSV, JSON) and the benchmark table. Uploads are
+validated (type, size) and run through the same `register_files` code path as the CLI.
 
 | Doc | Contents |
 |---|---|

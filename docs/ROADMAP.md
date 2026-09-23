@@ -2,9 +2,9 @@
 
 ## Prototype (this submission)
 - [x] Phase 0 — docs + skeleton
-- [x] Phase 1 — engine: ingest → Hapke render → SIFT (RoMa v2 optional, GPU) → MAGSAC++ → metrics/verdict → GeoTIFF; synthetic + LROC benchmark
-- [ ] Phase 1b — run TMC-2 / OHRC ↔ NAC once PRADAN scenes are in `data/raw/ch2/`; RoMa v2 benchmark on Colab GPU
-- [ ] Phase 2 — web demo (FastAPI + UI) + Colab notebook + results in README
+- [x] Phase 1 — engine: ingest → Hapke render → RoMa v2 / SIFT → MAGSAC++ → metrics/verdict → GeoTIFF; synthetic + LROC benchmark
+- [x] Phase 1b — real OHRC / TMC-2 ↔ NAC runs from PRADAN; RoMa v2 benchmark (Apple MPS locally, CUDA via Colab)
+- [x] Phase 2 — web demo (FastAPI + UI) + Colab notebook + results in README
 
 ## After selection (from report §13)
 

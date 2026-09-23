@@ -16,8 +16,8 @@
                   + cast-shadow mask (ray-march along Sun azimuth)
                   → reference domain now "lit like" the source
                  ▼
- C. MATCH         SIFT + Lowe ratio on source ↔ render and source ↔ reference (auto)
-                  [GPU option: RoMa v2 dense warp + certainty]
+ C. MATCH         RoMa v2 (DINOv3) dense warp + certainty on source ↔ render and
+                  source ↔ reference (auto keeps the better verdict)   [fallback: SIFT]
                  ▼
  D. GEOMETRY      certainty ≥ τ  →  grid-balanced sampling (k per cell)
                   → MAGSAC++ (cv2.USAC_MAGSAC) → affine | homography
@@ -41,14 +41,16 @@ The design follows the report's rule: **geometry and physics first, learning sec
 | `chitra/geometry.py` | Grid-balanced sampling, MAGSAC++ fit, residuals, warping | OpenCV |
 | `chitra/metrics.py` | RMSE / median / P90, inliers, coverage entropy, GT RMSE, verdict | numpy |
 | `chitra/pipeline.py` + `cli.py` | Orchestration, run folder, config snapshot | stdlib |
-| `app/` | FastAPI API + single-page UI | FastAPI, uvicorn |
+| `app/` | FastAPI API (`/api/runs`, `/api/register`, previews) + single-page UI | FastAPI, uvicorn |
+| `scripts/prep_ch2.py` | PDS4 L1 crop → north-up source + reference/DEM windows + label prior | rasterio |
+| `scripts/export_site.py` | Static export of the UI + results for hosting | stdlib |
 | `notebooks/chitra_colab.ipynb` | GPU run on Colab | — |
 
 ## 3. Key technical decisions
 
 | Decision | Choice | Why |
 |---|---|---|
-| Matcher | **SIFT on the Sun-matched render** (local default); **RoMa v2** optional on GPU | Once the render removes the illumination difference, a classical matcher reaches sub-pixel accuracy on a laptop CPU. RoMa v2 (DINOv3, dense, SOTA on extreme photometric change, arXiv 2511.15706) is too heavy for the 16 GB dev laptop, so it is an optional `[roma]` extra for Colab. |
+| Matcher | **RoMa v2** (default when installed); SIFT fallback | Dense, detector-free, DINOv3 features. On the real TMC-2 ↔ NAC pair (~166° Sun-azimuth change) SIFT is rejected with 9 inliers, while RoMa v2 on the Sun-matched render passes with 2,256 inliers. It runs on the 16 GB M4 via MPS with the 640 px `base` setting (~18 s, ~1.8 GB RAM) and uses `precise` on CUDA. |
 | Match domain | `auto`: try the real reference **and** the render, keep the better verdict | The render wins under large Sun changes; the real reference wins when the Sun already agrees, because the DTM render has no albedo texture. The chosen domain is recorded in `metrics.json`. |
 | Illumination handling | **Render the reference at the source's Sun** | Removes the Sun-angle difference by construction (Grumpe 2014; NASA LuNaMaps), instead of learning invariance to it. |
 | Reflectance model | Lommel-Seeliger disk function × Hapke single-term Henyey-Greenstein phase function | Physically grounded for regolith, cheap, and has no unconstrained parameters. The full Hapke model (roughness θ̄, opposition surge) is on the roadmap. |
@@ -76,5 +78,5 @@ runs/<timestamp>_<name>/
 
 ## 6. Deployment
 - **Local:** `uv run chitra register …` and `uv run uvicorn app.main:app`.
-- **GPU:** Colab notebook clones the repo and runs the same CLI on CUDA.
-- **Public link for the PPT:** the GitHub repo + Colab badge + a hosted results page.
+- **GPU:** `notebooks/chitra_colab.ipynb` clones the repo, fetches the public LROC data and runs `chitra benchmark --roma` on CUDA.
+- **Public link for the PPT:** the GitHub repo + Colab badge + the static results page from `scripts/export_site.py`.
