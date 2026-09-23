@@ -125,6 +125,17 @@ uv run uvicorn app.main:app --port 8765        # http://localhost:8765 : browse 
 uv run python scripts/export_site.py           # static copy in site/ (same page, no server) for hosting
 ```
 
+**Hosted page:** <https://chitra-seven.vercel.app> serves the static results. To make that **same link** fully live (uploads + RoMa v2 on
+your machine), start the engine, open a free tunnel and point the page at it:
+
+```bash
+uv run uvicorn app.main:app --port 8765                  # terminal 1
+cloudflared tunnel --url http://localhost:8765           # terminal 2 -> prints https://….trycloudflare.com
+scripts/go_live.sh https://….trycloudflare.com           # terminal 3: writes site/live.json + redeploys the same Vercel project
+```
+
+When the engine or tunnel stops, the page falls back to the static results by itself. `scripts/go_live.sh off` removes the pointer.
+
 The console shows every run with its verdict and reasons, the metric cards, the match / checkerboard / residual / render views, an 8×8
 inlier-density map (the "uniform distribution" requirement), downloads (GeoTIFF, CSV, JSON) and the benchmark table. Uploads are
 validated (type, size) and run through the same `register_files` code path as the CLI.

@@ -3,6 +3,7 @@
 uv run uvicorn app.main:app --port 8000     (then open http://localhost:8000)
 """
 import json
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -26,6 +28,9 @@ PREVIEW_PX = 1600
 
 RUNS.mkdir(exist_ok=True)
 app = FastAPI(title="CHITRA", description="Chandrayaan-2 image registration (SIH 2026 PS 26166)")
+# the hosted static page (Vercel) may call this engine through a tunnel; CHITRA_CORS overrides the allowed origins
+app.add_middleware(CORSMiddleware, allow_methods=["GET", "POST"], allow_headers=["*"],
+                   allow_origins=os.environ.get("CHITRA_CORS", "https://chitra-seven.vercel.app").split(","))
 
 
 def _run_summary(d):

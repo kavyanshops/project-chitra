@@ -21,8 +21,11 @@ def main():
     p.add_argument("--skip", nargs="*", default=["api_test", "upload"], help="run names to leave out")
     a = p.parse_args()
     out = Path(a.out)
-    shutil.rmtree(out, ignore_errors=True)
-    (out / "runs").mkdir(parents=True)
+    out.mkdir(exist_ok=True)
+    for f in out.iterdir():  # keep .vercel (the Vercel project link, so redeploys keep the same URL)
+        if f.name != ".vercel":
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
+    (out / "runs").mkdir()
 
     newest = {}
     for d in sorted(RUNS.iterdir(), reverse=True):
