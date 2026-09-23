@@ -1,0 +1,14 @@
+[project]
+name = "chitra"
+version = "0.1.0"
+description = "Physics-conditioned, uncertainty-aware registration of Chandrayaan-2 optical imagery (SIH 2026 PS 26166)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[project.scripts]
+chitra = "chitra.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
