@@ -16,8 +16,8 @@
                   + cast-shadow mask (ray-march along Sun azimuth)
                   → reference domain now "lit like" the source
                  ▼
- C. MATCH         RoMa v2 (frozen DINOv3 ViT-L + multi-view transformer + refiners)
-                  → dense warp + per-pixel certainty          [baseline: SIFT]
+ C. MATCH         SIFT + Lowe ratio on source ↔ render and source ↔ reference (auto)
+                  [GPU option: RoMa v2 dense warp + certainty]
                  ▼
  D. GEOMETRY      certainty ≥ τ  →  grid-balanced sampling (k per cell)
                   → MAGSAC++ (cv2.USAC_MAGSAC) → affine | homography
@@ -48,7 +48,8 @@ The design follows the report's rule: **geometry and physics first, learning sec
 
 | Decision | Choice | Why |
 |---|---|---|
-| Matcher | **RoMa v2** | Dense and detector-free (so it works on weak mare texture), with DINOv3 features robust to photometric change and certainty output for filtering. It is SOTA on extreme photometric and viewpoint benchmarks (arXiv 2511.15706). Fallback: RoMa v1 (`romatch`, DINOv2) if v2 cannot run on the device. |
+| Matcher | **SIFT on the Sun-matched render** (local default); **RoMa v2** optional on GPU | Once the render removes the illumination difference, a classical matcher reaches sub-pixel accuracy on a laptop CPU. RoMa v2 (DINOv3, dense, SOTA on extreme photometric change, arXiv 2511.15706) is too heavy for the 16 GB dev laptop, so it is an optional `[roma]` extra for Colab. |
+| Match domain | `auto`: try the real reference **and** the render, keep the better verdict | The render wins under large Sun changes; the real reference wins when the Sun already agrees, because the DTM render has no albedo texture. The chosen domain is recorded in `metrics.json`. |
 | Illumination handling | **Render the reference at the source's Sun** | Removes the Sun-angle difference by construction (Grumpe 2014; NASA LuNaMaps), instead of learning invariance to it. |
 | Reflectance model | Lommel-Seeliger disk function × Hapke single-term Henyey-Greenstein phase function | Physically grounded for regolith, cheap, and has no unconstrained parameters. The full Hapke model (roughness θ̄, opposition surge) is on the roadmap. |
 | Robust estimator | **MAGSAC++** | Threshold-free marginalisation. It is more accurate than vanilla RANSAC and already built into OpenCV ≥ 4.5. |
