@@ -334,5 +334,12 @@ $("#upload").onsubmit = async e => {
 
 load().catch(e => { $("#detail").innerHTML = `<p class="note">Could not load runs (${e.message}).</p>`; });
 </script>
+
+<!-- Vercel Web Analytics -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+
 </body>
 </html>
